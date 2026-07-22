@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -813,6 +814,7 @@ tr:hover td{
                         <th colspan="2">POKER</th>
                         <th colspan="2">ESPORTS SPORTGG</th>
                         <th colspan="2">SPORTBOOK</th>
+                        <th colspan="2">Saba Sportsbook</th>
                         <th colspan="2">Streamspin</th>
                         <th colspan="2">Streamspin Gift</th>
                         <th colspan="2">TOTALAN LIVEGAMES</th>
@@ -832,12 +834,14 @@ tr:hover td{
                         <th>TURNOVER</th><th>W/L</th>
                         <th>TURNOVER</th><th>W/L</th>
                         <th>TURNOVER</th><th>W/L</th>
+                        <th>TURNOVER</th><th>W/L</th>
                     </tr>
                 </thead>
 
                 <tbody id="tableBody">
                     <tr>
                         <td>Data Hasil</td>
+                        <td>0.00</td><td>0.00</td>
                         <td>0.00</td><td>0.00</td>
                         <td>0.00</td><td>0.00</td>
                         <td>0.00</td><td>0.00</td>
@@ -957,23 +961,47 @@ function processData() {
         { key: "Arcade", col: 6 },
         { key: "poker", col: 7 },
         { key: "Esports", col: 8 },
-        { key: "Sportsbook", col: 9 },
-        { key: "Streamspin", col: 10 },
-        { key: "Streamspin Gift", col: 11 },
-        { key: "Live Game", col: 12 }
+        { key: "Sportsbook", col: 9, linePattern: "^\\s*Sportsbook\\b" },
+        { key: "Streamspin", col: 11 },
+        { key: "Streamspin Gift", col: 12 },
+        { key: "Live Game", col: 13 }
     ];
 
     const cells = document.querySelectorAll('#tableBody td');
     let found = 0;
 
+    // SABA SPORTBOOK dibaca langsung per baris agar tidak tertukar dengan SPORTBOOK.
+    const sabaLine = raw
+        .replace(/\u00a0/g, ' ')
+        .split(/\r?\n/)
+        .find(line => /^\s*Saba\s+Sportsbook\b/i.test(line));
+
+    if (sabaLine) {
+        const numbers = sabaLine.match(/[+-]?\d[\d,]*(?:\.\d+)?%?/g) || [];
+
+        if (numbers.length >= 3) {
+            const turnoverRaw = parseFloat(numbers[0].replace(/,/g, ''));
+            const wlRaw = parseFloat(numbers[2].replace(/,/g, ''));
+
+            cells[21].innerText = turnoverRaw.toLocaleString('en-US', {maximumFractionDigits: 0});
+            cells[22].innerText = (wlRaw * -1).toLocaleString('en-US', {maximumFractionDigits: 0});
+            found++;
+        }
+    }
+
     map.forEach(item => {
-        const regex = new RegExp(item.key + "[^\\d-]*([\\d,]+\\.\\d{2})[^%]*%[^\\d-]*(-?[\\d,]+\\.\\d{2})", "i");
+        const keyPattern = item.linePattern || item.key;
+        const regex = new RegExp(keyPattern + "[^\\d-]*([\\d,]+(?:\\.\\d{1,2})?)[^%]*%[^\\d+-]*([+-]?[\\d,]+(?:\\.\\d{1,2})?)", "im");
         const match = raw.match(regex);
 
         if (match) {
-            let turnover = match[1];
+            let turnover = item.wholeNumber
+                ? parseFloat(match[1].replace(/,/g, '')).toLocaleString('en-US', {maximumFractionDigits: 0})
+                : match[1];
             let wlRaw = parseFloat(match[2].replace(/,/g, ''));
-            let wl = wlRaw === 0 ? "0.00" : (wlRaw * -1).toLocaleString(undefined, {minimumFractionDigits: 2});
+            let wl = item.wholeNumber
+                ? (wlRaw * -1).toLocaleString('en-US', {maximumFractionDigits: 0})
+                : (wlRaw === 0 ? "0.00" : (wlRaw * -1).toLocaleString(undefined, {minimumFractionDigits: 2}));
 
             cells[1 + (item.col * 2)].innerText = turnover;
             cells[2 + (item.col * 2)].innerText = wl;
