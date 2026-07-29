@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -961,7 +962,6 @@ function processData() {
         { key: "Arcade", col: 6 },
         { key: "poker", col: 7 },
         { key: "Esports", col: 8 },
-        { key: "Sportsbook", col: 9, linePattern: "^\\s*Sportsbook\\b" },
         { key: "Streamspin", col: 11 },
         { key: "Streamspin Gift", col: 12 },
         { key: "Live Game", col: 13 }
@@ -969,6 +969,31 @@ function processData() {
 
     const cells = document.querySelectorAll('#tableBody td');
     let found = 0;
+
+    // SPORTBOOK hanya mengambil baris "Sbo Sportsbook", bukan "Saba Sportsbook".
+    const sportsbookLine = raw
+        .replace(/\u00a0/g, ' ')
+        .split(/\r?\n/)
+        .find(line => /^\s*Sbo\s+Sportsbook\b/i.test(line));
+
+    if (sportsbookLine) {
+        const numbers = sportsbookLine.match(/[+-]?\d[\d,]*(?:\.\d+)?%?/g) || [];
+
+        if (numbers.length >= 3) {
+            const turnoverRaw = parseFloat(numbers[0].replace(/,/g, ''));
+            const wlRaw = parseFloat(numbers[2].replace(/,/g, ''));
+
+            cells[19].innerText = turnoverRaw.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            cells[20].innerText = (wlRaw === 0 ? 0 : wlRaw * -1).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            found++;
+        }
+    }
 
     // SABA SPORTBOOK dibaca langsung per baris agar tidak tertukar dengan SPORTBOOK.
     const sabaLine = raw
